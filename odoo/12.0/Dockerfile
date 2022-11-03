@@ -1,4 +1,4 @@
-FROM ursa/ubuntu-18.04:latest
+FROM ursa/ubuntu-20.04:latest
 MAINTAINER Open Source Integrators <support@opensourceintegrators.com>
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
@@ -10,8 +10,8 @@ RUN apt update \
         gnupg \
         libpq-dev \
         gosu \
-        libssl1.0-dev \
-        nodejs-dev \
+#        libssl1.0-dev \
+#        nodejs-dev \
         node-gyp \
         node-less \
         npm \
@@ -25,7 +25,7 @@ RUN apt update \
         python3-vobject \
         python3-watchdog \
         python3-wheel \
-        python3-xlrd \
+#        python3-xlrd \
         rsync \
         xz-utils \
     && curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb \
@@ -37,8 +37,8 @@ RUN apt update \
 RUN curl https://rclone.org/install.sh | bash
 
 # install latest postgresql-client
-ENV PGVERSION=12
-RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
+ENV PGVERSION=13
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
     && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt update  \
     && apt install --no-install-recommends -y postgresql-client-$PGVERSION \

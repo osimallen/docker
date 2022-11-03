@@ -40,7 +40,7 @@ function config_rclone() {
 function config_odoo() {
   echo "Configure Odoo"
   dockerize -template $TEMPLATES/odoo.conf.tmpl:$ODOO_RC
-  chown -R odoo $ODOO_DATA_DIR $ODOO_RC
+  chown -R odoo $ODOO_RC
 }
 
 # Main functions

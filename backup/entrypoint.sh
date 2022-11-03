@@ -113,7 +113,8 @@ function config_rclone() {
 # Common functions
 function restore_odoo_database() {
  echo "Load dump in $PGDATABASE"
- zcat /tmp/production-master-$RPO_DATE.sql.gz | psql $PGDATABASE
+ #zcat /tmp/production-master-$RPO_DATE.sql.gz | psql $PGDATABASE
+ zcat /backup/production-master-$RPO_DATE.sql.gz | psql $PGDATABASE
  echo "Deactivate the cron jobs and email servers"
  psql -c "
  UPDATE ir_cron SET active = 'f';
@@ -128,23 +129,27 @@ function backup() {
   case "$1" in
     "odoo")
       echo "Dump the database $PGDATABASE"
-      pg_dump --clean $PGDATABASE | gzip > /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz
-      echo "Push it to backup"
-      rclone copy /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz backup:/$BACKUP_SPACE/$BACKUP_BUCKET/
+      #pg_dump --clean $PGDATABASE | gzip > /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz
+      pg_dump --clean $PGDATABASE | gzip > /backup/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz
+      #echo "Push it to backup"
+      #rclone copy /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz backup:/$BACKUP_SPACE/$BACKUP_BUCKET/
       echo "Overwrite latest database backup"
-      rclone copyto backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$RPO_DATE.sql.gz
+      #rclone copyto backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$RPO_DATE.sql.gz
+      rm -f /backup/$RUNNING_ENV-$PGDATABASE-$RPO_DATE.sql.gz
+      cp /backup/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz  /backup/$RUNNING_ENV-$PGDATABASE-$RPO_DATE.sql.gz
       echo "Sync the filestore to backup"
-      rclone sync filestore:/$FILESTORE_SPACE/$FILESTORE_BUCKET/ backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/
-      echo "Overwrite latest filestore backup"
-      rclone sync backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/ backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$RPO_DATE/
-      echo "Cleanup last month copy on backup"
-      ! rclone purge backup:/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$LASTMONTH/
-      ! rclone delete backup:/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$LASTMONTH.sql.gz
-      if [ $REMOTE_ENABLED == 'true' ]; then
-        echo "Push, sync and cleanup to/on remote"
-        rclone copy /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz remote:/$REMOTE_BUCKET/
-        rclone sync filestore:/$FILESTORE_BUCKET/ remote:/$REMOTE_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/
-      fi
+      #rclone sync filestore:/$FILESTORE_SPACE/$FILESTORE_BUCKET/ backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/
+      rsync -u -r --delete /odoo/data/filestore/$PGDATABASE/ /backup/$RUNNING_ENV-$PGDATABASE-$RPO_DATE
+      #echo "Overwrite latest filestore backup"
+      #rclone sync backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/ backup:/$BACKUP_SPACE/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$RPO_DATE/
+      #echo "Cleanup last month copy on backup"
+      #! rclone purge backup:/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$LASTMONTH/
+      #! rclone delete backup:/$BACKUP_BUCKET/$RUNNING_ENV-$PGDATABASE-$LASTMONTH.sql.gz
+      #if [ $REMOTE_ENABLED == 'true' ]; then
+      #  echo "Push, sync and cleanup to/on remote"
+      #  rclone copy /tmp/$RUNNING_ENV-$PGDATABASE-$TODAY.sql.gz remote:/$REMOTE_BUCKET/
+      #  rclone sync filestore:/$FILESTORE_BUCKET/ remote:/$REMOTE_BUCKET/$RUNNING_ENV-$PGDATABASE-$TODAY/
+      #fi
       ;;
     *)
       echo "Backup profile does not exist. I don't know how to backup $1."
@@ -162,10 +167,11 @@ function restore() {
       dropdb --if-exists $PGDATABASE
       echo "Create $PGDATABASE database"
       createdb $PGDATABASE
-      echo "Download $RPO_DATE backup"
-      rclone copy backup:/$BACKUP_SPACE/$BACKUP_BUCKET/production-master-$RPO_DATE.sql.gz /tmp/
+      #echo "Download $RPO_DATE backup"
+      #rclone copy backup:/$BACKUP_SPACE/$BACKUP_BUCKET/production-master-$RPO_DATE.sql.gz /tmp/
       echo "Sync the $RPO_DATE filestore"
-      rclone sync backup:/$BACKUP_SPACE/$BACKUP_BUCKET/production-master-$RPO_DATE/ filestore:/$FILESTORE_SPACE/$FILESTORE_BUCKET/
+      rsync -u -r --delete /backup/production-master-$RPO_DATE/ /odoo/data/filestore/$PGDATABASE
+      #rclone sync backup:/$BACKUP_SPACE/$BACKUP_BUCKET/production-master-$RPO_DATE/ filestore:/$FILESTORE_SPACE/$FILESTORE_BUCKET/
       echo "Restore database dump"
       restore_odoo_database
       ;;
