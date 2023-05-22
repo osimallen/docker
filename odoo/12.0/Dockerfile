@@ -37,7 +37,7 @@ RUN apt update \
 RUN curl https://rclone.org/install.sh | bash
 
 # install latest postgresql-client
-ENV PGVERSION=13
+ENV PGVERSION=14
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
     && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt update  \
