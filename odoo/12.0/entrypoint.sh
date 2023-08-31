@@ -69,7 +69,17 @@ function migrate() {
     export PGDATABASE=$DB_NAME
     [ "$OLD" != "" ] && export MARABUNTA_FORCE_VERSION=$NEW
     echo "Migrating $DB_NAME"
-    psql -d $1 -c "delete from marabunta_version where date_start is not null and date_done is null;"
+    TABLE_EXIST2=$(psql -X -A -t -d $DB_NAME -c "
+      SELECT EXISTS(
+        SELECT *
+        FROM information_schema.tables
+        WHERE table_schema='public' AND
+          table_catalog='$DB_NAME' AND
+          table_name='marabunta_version'
+      )";)
+    if [ "$TABLE_EXIST2" = "1" ]; then
+      psql -d $1 -c "delete from marabunta_version where date_start is not null and date_done is null;"
+    fi
     gosu odoo marabunta
     sed -i -e "s/db_name =.*/db_name = $OLD_PGDATABASE/" "$ODOO_RC"
     export PGDATABASE=$OLD_PGDATABASE
